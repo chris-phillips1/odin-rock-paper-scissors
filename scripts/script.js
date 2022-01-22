@@ -1,81 +1,136 @@
 function getComputerChoice(choices) {
-    return choices[Math.floor(Math.random() * choices.length)];
+    const keys = Object.keys(choices);
+    return choices[keys[Math.floor(Math.random() * keys.length)]];
 }
 
-function getUserChoice(choiceName, choices) {
-    return choices.find(choice => choice.name === choiceName);
+function getPlayerChoice(choiceName, choices) {
+    return choices[choiceName];
 }
 
-function playRound(userChoice, computerChoice) {
-    let result = '';
+function updateChoices(playerChoice, choices) {
+    PLAYER.CHOICE = getPlayerChoice(playerChoice, choices);
+    COMPUTER.CHOICE = getComputerChoice(choices);
+}
 
-    if (userChoice.name === computerChoice.name) {
-        result = 'It is a tie.';
-    } else if (userChoice.name === computerChoice.weakness) {
-        SCORE.USER++;
-        result = `The player wins! ${userChoice.name} beats ${computerChoice.name}.`;
-    } else if (userChoice.name === computerChoice.advantage) {
-        SCORE.COMPUTER++;
-        result = `The computer wins! ${computerChoice.name} beats ${userChoice.name}.`;
+function playRound() {
+    let result;
+
+    if (PLAYER.CHOICE.name === COMPUTER.CHOICE.weakness) {
+        result = {winner: 'player', winnerObject: PLAYER.CHOICE};
+    } else if (PLAYER.CHOICE.name === COMPUTER.CHOICE.advantage) {
+        result = {winner: 'computer', winnerObject: COMPUTER.CHOICE};
+    } else {
+        result = {winner: '', winnerObject: {}};
     }
-
-    if (SCORE.USER >= 5 || SCORE.COMPUTER >= 5) {
-        removeAllChildren(resultsDiv);
-        scoreDiv.textContent = '0-0';
-
-        if (SCORE.USER >= 5) {
-            resultsDiv.textContent = `The player wins the previous set! ${SCORE.USER}-${SCORE.COMPUTER}.`;
-        } else {
-            resultsDiv.textContent = `The computer wins the previous set! ${SCORE.COMPUTER}-${SCORE.USER}`;
-        }
-
-        SCORE.USER = 0;
-        SCORE.COMPUTER = 0;
-    }
-
-    scoreDiv.textContent = `Player: ${SCORE.USER} Computer: ${SCORE.COMPUTER}`;
 
     return result;
 }
 
-function removeAllChildren(element) {
-    while (element.firstChild) {
-        element.removeChild(element.firstChild)
+function updateResultElement(roundResult, resultElement) {
+    let resultText = '';
+    if (roundResult.winner === 'player') {
+        resultText = `The player's ${roundResult.winnerObject.name} beats the computer's ${roundResult.winnerObject.advantage}!`;
+    } else if (roundResult.winner === 'computer') {
+        resultText = `The computers's ${roundResult.winnerObject.name} beats the player's ${roundResult.winnerObject.advantage}!`;
+    } else {
+        resultText =  `It's a tie!`;
     }
-}  
 
-let SCORE = {
-    USER: 0,
-    COMPUTER: 0
+    const resultPara = document.createElement('p'); 
+    resultPara.textContent = resultText;
+    resultElement.appendChild(resultPara);
+    resultElement.scrollIntoView();
+}
+
+function clearResultElement(resultElement) {
+    while (resultElement.firstChild) {
+        resultElement.removeChild(resultElement.firstChild)
+    }
+} 
+
+function updateScore(roundResult, scoreElement) {
+
+    if (roundResult.winner === 'player') {
+        PLAYER.SCORE += 1;
+    } else if (roundResult.winner === 'computer') {
+        COMPUTER.SCORE += 1;
+    }
+
+    scoreElement.textContent = `${PLAYER.SCORE}-${COMPUTER.SCORE}`;
+}
+
+function resetScore(scoreElement) {
+    scoreElement.textContent = `0-0`;
+    PLAYER.SCORE = 0;
+    COMPUTER.SCORE = 0;
+}
+
+function checkGameForWinner() {
+    return (PLAYER.SCORE === 5 || COMPUTER.SCORE === 5);
+}
+
+function showWinnerText(winnerElement) {
+    if (PLAYER.SCORE > COMPUTER.SCORE) {
+        winnerElement.textContent = `Player wins ${PLAYER.SCORE}-${COMPUTER.SCORE}`;
+    } else {
+        winnerElement.textContent = `Computer wins ${COMPUTER.SCORE}-${PLAYER.SCORE}`;
+    }
+
+    winnerElement.classList.remove('hidden');
+}
+
+function hideWinnerText(winnerElement) {
+    winnerElement.classList.add('hidden');
+}
+
+function updateGameState(playerChoice, choices, scoreElement, resultElement, winnerElement) {
+    updateChoices(playerChoice, choices);
+
+    let roundResult = playRound();
+    updateScore(roundResult, scoreElement, resultElement, winnerElement);
+    updateResultElement(roundResult, resultElement);
+
+    if (checkGameForWinner()) {
+        showWinnerText(winnerElement);
+        clearResultElement(resultElement);
+        resetScore(scoreElement);
+    } else {
+        hideWinnerText(winnerElement);
+    }
+}
+
+const choices = {
+    'rock': {name: 'rock', advantage: 'scissors', weakness: 'paper'}, 
+    'paper': {name: 'paper', advantage: 'rock', weakness: 'scissors'}, 
+    'scissors': {name: 'scissors', advantage: 'paper', weakness: 'rock'}
 };
 
-let choices = [
-    {name: 'rock', advantage: 'scissors', weakness: 'paper'}, 
-    {name: 'paper', advantage: 'rock', weakness: 'scissors'}, 
-    {name: 'scissors', advantage: 'paper', weakness: 'rock'}
-];
+const PLAYER = {
+    SCORE: 0,
+    CHOICE: {}
+};
+
+const COMPUTER = {
+    SCORE: 0,
+    CHOICE: {}
+}
 
 const scoreDiv = document.querySelector('.running-score');
 const resultsDiv = document.querySelector('.results-display');
+const winnerDiv = document.querySelector('.winner-display');
 
 const rockButton = document.querySelector('.rock-btn');
 const paperButton = document.querySelector('.paper-btn');
 const scissorsButton = document.querySelector('.scissors-btn');
 
 rockButton.addEventListener('click', () => {
-    const resultPara = document.createElement('p'); 
-    resultPara.textContent = playRound(getUserChoice('rock', choices), getComputerChoice(choices));
-    resultsDiv.appendChild(resultPara);
+    updateGameState('rock', choices, scoreDiv, resultsDiv, winnerDiv);
 });
 
 paperButton.addEventListener('click', () => {
-    const resultPara = document.createElement('p'); 
-    resultPara.textContent = playRound(getUserChoice('paper', choices), getComputerChoice(choices));
-    resultsDiv.appendChild(resultPara);
+    updateGameState('paper', choices, scoreDiv, resultsDiv, winnerDiv);
 });
 
 scissorsButton.addEventListener('click', () => {
-    const resultPara = document.createElement('p'); 
-    resultPara.textContent = playRound(getUserChoice('scissors', choices), getComputerChoice(choices));
-    resultsDiv.appendChild(resultPara);
+    updateGameState('scissors', choices, scoreDiv, resultsDiv, winnerDiv);
 });
